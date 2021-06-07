@@ -1,0 +1,40 @@
+# programming language
+language: php
+
+# list any PHP versions you want to test against
+php:
+  - 8.0
+
+# install mysql to run phpunit tests
+services:
+  - mysql
+
+# build only on specific branches
+branches:
+  only:
+    - master
+    - stage
+
+# actions taken before install
+before_install:
+  #- curl -s --data "Starting build job on $TRAVIS_BRANCH branch." 'https://$YOURSUBDOMAIN.slack.com/services/hooks/slackbot?token=${TOKEN}&channel=$CHANNEL'
+  - export PATH=$HOME/.local/bin:$PATH
+  - phpenv config-rm xdebug.ini
+
+script:
+  - phpunit --colors=always .
+
+# prepare the build for deployment
+before_deploy:
+  - docker build -f Dockerfile --build-arg URL=$URL --build-arg AUTH=$AUTH --build-arg SECRET=$SECRET -t registry.gitlab.com/siterocket/medstacktest/apachephp:$TRAVIS_BRANCH .
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin registry.gitlab.com
+  - docker push registry.gitlab.com/siterocket/medstacktest/apachephp:$TRAVIS_BRANCH
+  
+# deploy
+deploy:
+  - provider: script
+    script: 
+      curl -X POST -H "Accept:application/json" -H "Authorization:Basic $AUTH" "$URL/$(docker run --rm registry.gitlab.com/siterocket/medstacktest/apachephp:$TRAVIS_BRANCH echo \$company_id/clusters/\$cluster_id/services/\$service_id)/refresh_image"
+    skip_cleanup: true
+    on:
+      all_branches: true
