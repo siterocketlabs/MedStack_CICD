@@ -6,9 +6,7 @@ COPY ./index.php /var/www/html/index.php
 
 COPY ./api.sh /root/api.sh
 
-RUN chmod +x /root/api.sh
-
-RUN rm -f /var/www/html/index.html
+RUN chmod +x /root/api.sh && rm -f /var/www/html/index.html
 
 ARG URL=${URL}
 
